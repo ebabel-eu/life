@@ -1,0 +1,232 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Life</title>
+
+  <style>
+    body {
+      font-size: 10px;
+      font-family: 'Courier New', Courier, monospace;
+    }
+    h1 {
+      font-size: 3em;
+      margin: 0 0 0.25em;
+    }
+    p {
+      font-size: 1.5em;
+    }
+    #grid {
+      display: grid;
+      grid-template-columns: repeat(12, 26px);
+      grid-template-rows: repeat(9, 26px);
+      margin: 0 0 3em;
+      padding: 0;
+      grid-gap: 2px;
+    }
+    #grid li {
+      margin: 0;
+      list-style: none;
+      text-align: center;
+      line-height: 26px;
+      border-right: 1px solid rgba(0,50,0,0.1);
+      border-bottom: 1px solid rgba(0,50,0,0.1);
+      border-radius: 25%;
+      color: rgba(0,0,0,0.5);
+    }
+    #grid li.food {
+      background-color: rgba(0,255,0,0.25);
+    }
+    #grid li.live {
+      background-color: rgba(255,0,0,0.5);
+    }
+
+    #log {
+      margin: 0;
+      padding: 0;
+      width: 338px;
+      height: 18em;
+      scroll-behavior: smooth;
+      overflow-y: scroll;
+    }
+    #log li {
+      list-style: none;
+      font-size: 1.2em;
+      line-height: 1.2em;
+    }
+    #log li:nth-child(odd) {
+      background-color: rgba(0,25,0,0.1);
+    }
+
+    #feed {
+      margin-bottom: 1em;
+    }
+  </style>
+</head>
+<body>
+  <h1>Life</h1>
+  <p>Population: <span id="population">6</span> &bull; Days: <span id="days">1</span></p>
+
+  <ul id="grid"></ul>
+
+  <button id="feed">Feed</button>
+
+  <h2>Log</h2>
+  <ul id="log"></ul>
+
+  <script>
+    const grid = document.getElementById('grid');
+    const log = document.getElementById('log');
+    const size = 12 * 9;
+    const cells = [];
+    let generation = 0;
+
+    for (let i = 0; i < size; i++) {
+      const li = document.createElement('li');
+      li.dataset.index = i;
+      li.className = 'food';
+      li.textContent = i;
+      grid.appendChild(li);
+      cells.push(li);
+    }
+
+    function toggle(index) {
+      const cell = cells[index];
+      if (cell.className === 'food') {
+        cell.className = 'live';
+      } else {
+        cell.className = 'food';
+      }
+    }
+
+    function getNeighbors(index) {
+      const neighbors = [];
+      const row = Math.floor(index / 12);
+      const col = index % 12;
+      const top = row - 1;
+      const bottom = row + 1;
+      const left = col - 1;
+      const right = col + 1;
+
+      if (top >= 0) {
+        neighbors.push(top * 12 + col);
+      }
+      if (bottom < 9) {
+        neighbors.push(bottom * 12 + col);
+      }
+      if (left >= 0) {
+        neighbors.push(row * 12 + left);
+      }
+      if (right < 12) {
+        neighbors.push(row * 12 + right);
+      }
+      if (top >= 0 && left >= 0) {
+        neighbors.push(top * 12 + left);
+      }
+      if (top >= 0 && right < 12) {
+        neighbors.push(top * 12 + right);
+      }
+      if (bottom < 9 && left >= 0) {
+        neighbors.push(bottom * 12 + left);
+      }
+      if (bottom < 9 && right < 12) {
+        neighbors.push(bottom * 12 + right);
+      }
+
+      return neighbors;
+    }
+
+    function getLiveNeighbors(index) {
+      const neighbors = getNeighbors(index);
+      return neighbors.filter(i => cells[i].className === 'live');
+    }
+
+    function pick6randomCells() {
+      const randomCells = [];
+      while (randomCells.length < 6) {
+        const randomIndex = Math.floor(Math.random() * size);
+        if (!randomCells.includes(randomIndex)) {
+          randomCells.push(randomIndex);
+        }
+      }
+      return randomCells;
+    }
+
+    function init() {
+      const randomCells = pick6randomCells();
+      randomCells.forEach(index => toggle(index));
+    }
+
+    function updateLog(message) {
+      const li = document.createElement('li');
+      li.textContent = message;
+      log.appendChild(li);
+      log.scrollTop = log.scrollHeight;
+    }
+
+    function feed() {
+      cells.forEach((cell, index) => {
+        if (cell.className === 'live') {
+          const foodNeighbors = getNeighbors(index).filter(i => cells[i].className === 'food');
+          if (foodNeighbors.length > 0) {
+            const randomIndex = foodNeighbors[Math.floor(Math.random() * foodNeighbors.length)];
+            cells[randomIndex].className = 'moved';
+            cells[index].className = '';
+            updateLog(`Cell ${index} ate cell ${randomIndex}.`);
+          }
+
+          if (foodNeighbors.length === 0) {
+            cells[index].className = 'food';
+            updateLog(`Cell ${index} died of hunger.`);
+          }
+        }
+      });
+
+      cells.forEach(cell => {
+        if (cell.className === 'moved') {
+          cell.className = 'live';
+        }
+      });
+
+      reproduce();
+    }
+
+    function reproduce() {
+      cells.forEach((cell, index) => {
+        if (cell.className === 'live') {
+          const liveNeighbors = getLiveNeighbors(index);
+          if (liveNeighbors.length > 0) {
+            const randomIndex = liveNeighbors[Math.floor(Math.random() * liveNeighbors.length)];
+            cells[randomIndex].className = 'live';
+            updateLog(`Cells ${index} gave birth to ${randomIndex}.`);
+          }
+        }
+      });
+    }
+
+    function update() {
+      const liveCells = cells.filter(cell => cell.className === 'live');
+      const population = liveCells.length;
+      const days = generation + 1;
+      document.getElementById('population').textContent = population;
+      document.getElementById('days').textContent = days;
+      generation++;
+
+      if (population === 0) {
+        updateLog(`All cells died after ${days} days.`);
+        document.getElementById('feed').disabled = true;
+      }
+    }
+
+    document.getElementById('feed').addEventListener('click', () => {
+      feed();
+      update();
+    });
+
+    init();
+
+  </script>
+
+</body>
+</html>
