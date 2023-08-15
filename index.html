@@ -91,15 +91,6 @@
       cells.push(li);
     }
 
-    function toggle(index) {
-      const cell = cells[index];
-      if (cell.className === 'food') {
-        cell.className = 'live';
-      } else {
-        cell.className = 'food';
-      }
-    }
-
     function getNeighbors(index) {
       const neighbors = [];
       const row = Math.floor(index / 12);
@@ -155,7 +146,9 @@
 
     function init() {
       const randomCells = pick6randomCells();
-      randomCells.forEach(index => toggle(index));
+      randomCells.forEach((index) => {
+        cells[index].className = 'live';
+      });
     }
 
     function updateLog(message) {
